@@ -1,7 +1,6 @@
 """Incomplete Exam eligibility workflow.
 
-Same architecture as Agent 3 (Academic Eligibility Evaluation Agent For Raise
-Capacity): Gemini never chooses which tool to call and is not given tool access.
+Gemini never chooses which tool to call and is not given tool access.
 
 Pipeline:
 
