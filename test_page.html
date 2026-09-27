@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Agent 5 Test Page — Incomplete Exam Eligibility</title>
+<style>
+  :root {
+    --gray: #6b7280; --gray-bg: #f3f4f6;
+    --green: #059669; --green-bg: #ecfdf5;
+    --red: #dc2626; --red-bg: #fef2f2;
+    --amber: #d97706; --amber-bg: #fffbeb;
+    --border: #e5e7eb;
+  }
+  body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 780px; margin: 40px auto; padding: 0 20px; color: #1f2937; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { color: var(--gray); font-size: 13px; margin-bottom: 24px; }
+  .input-row { display: flex; gap: 8px; margin-bottom: 24px; }
+  input { flex: 1; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; }
+  button { padding: 10px 18px; border: none; border-radius: 8px; background: #111827; color: white; font-size: 14px; cursor: pointer; }
+  button:hover { background: #000; }
+  button:disabled { background: var(--gray); cursor: not-allowed; }
+  .card { border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+  .header-card { background: var(--gray-bg); }
+  .row { display: flex; justify-content: space-between; font-size: 13px; margin: 4px 0; }
+  .row b { color: #374151; }
+  .check-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+  .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.02em; }
+  .tag.pass { background: var(--green-bg); color: var(--green); }
+  .tag.fail { background: var(--red-bg); color: var(--red); }
+  .tag.na { background: var(--gray-bg); color: var(--gray); }
+  .tag.found { background: var(--green-bg); color: var(--green); }
+  .tag.notfound { background: var(--red-bg); color: var(--red); }
+  .check-detail { font-size: 13px; color: #4b5563; }
+  .rec-banner { border-radius: 10px; padding: 18px; text-align: center; font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+  .rec-banner.APPROVE { background: var(--green-bg); color: var(--green); }
+  .rec-banner.REJECT { background: var(--red-bg); color: var(--red); }
+  .rec-banner.MANUAL_REVIEW { background: var(--amber-bg); color: var(--amber); }
+  .reasoning { font-size: 14px; line-height: 1.5; margin-bottom: 16px; }
+  .explain h4 { font-size: 13px; margin: 10px 0 2px; }
+  .explain p { font-size: 13px; color: #4b5563; margin: 0 0 6px; line-height: 1.5; }
+  details { margin-top: 20px; }
+  summary { cursor: pointer; font-size: 12px; color: var(--gray); }
+  pre { background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 8px; font-size: 11px; overflow-x: auto; }
+  .error { background: var(--red-bg); color: var(--red); padding: 12px; border-radius: 8px; font-size: 13px; }
+  .status-note { font-size: 12px; color: var(--amber); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Agent 5 — Incomplete Exam Eligibility</h1>
+<p class="sub">Local test page. Calls the FastAPI wrapper at <code>http://localhost:8000</code> — start it first with <code>uvicorn api:app --reload --port 8000</code>.</p>
+
+<div class="input-row">
+  <input id="requestId" type="text" placeholder="e.g. STUD_INCRQ_INC2_000008" />
+  <button id="goBtn" onclick="evaluate()">Evaluate</button>
+</div>
+
+<div class="input-row" style="align-items: center;">
+  <label style="font-size: 13px; color: var(--gray);">
+    Attach document(s) (optional, test-only, nothing is saved):
+  </label>
+  <input id="attachments" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple style="flex: none;" />
+</div>
+
+<div id="output"></div>
+
+<script>
+const API_BASE = "http://localhost:8000";
+
+function tag(cls, text) {
+  return `<span class="tag ${cls}">${text}</span>`;
+}
+
+function statusTag(satisfied) {
+  if (satisfied === null || satisfied === undefined) return tag("na", "N/A");
+  return satisfied ? tag("pass", "PASS") : tag("fail", "FAIL");
+}
+
+function foundTag(found) {
+  return found ? tag("found", "FOUND") : tag("notfound", "NOT FOUND");
+}
+
+async function evaluate() {
+  const requestId = document.getElementById("requestId").value.trim();
+  const fileInput = document.getElementById("attachments");
+  const files = fileInput.files;
+  const output = document.getElementById("output");
+  const btn = document.getElementById("goBtn");
+  if (!requestId) { output.innerHTML = `<div class="error">Enter a request ID first.</div>`; return; }
+
+  btn.disabled = true;
+  btn.textContent = "Evaluating…";
+  output.innerHTML = `<p class="sub">Contacting local API…</p>`;
+
+  try {
+    let res;
+    if (files.length > 0) {
+      const formData = new FormData();
+      for (const f of files) formData.append("files", f);
+      res = await fetch(`${API_BASE}/evaluate-with-attachments/${encodeURIComponent(requestId)}`, {
+        method: "POST",
+        body: formData,
+      });
+    } else {
+      res = await fetch(`${API_BASE}/evaluate/${encodeURIComponent(requestId)}`);
+    }
+    const data = await res.json();
+
+    if (!res.ok) {
+      output.innerHTML = `<div class="error"><b>Error:</b> ${data.detail || "Request failed."}</div>`;
+      return;
+    }
+
+    render(data);
+  } catch (err) {
+    output.innerHTML = `<div class="error">
+      Could not reach the local API at ${API_BASE}. Is <code>uvicorn api:app --reload --port 8000</code> running?
+      <br><br><small>${err}</small>
+    </div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Evaluate";
+  }
+}
+
+function render(data) {
+  const ev = data.evidence;
+  const c = ev.checks;
+  const output = document.getElementById("output");
+
+  const statusNote = data.gemini_status !== "ok"
+    ? `<div class="status-note">gemini_status=${data.gemini_status}${data.gemini_error ? ": " + data.gemini_error : ""}</div>`
+    : "";
+
+  output.innerHTML = `
+    <div class="card header-card">
+      <div class="row"><span>Request</span><b>${data.request_id}</b></div>
+      <div class="row"><span>Student</span><b>${ev.student.Student_Name} (${ev.student.Student_ID})</b></div>
+      <div class="row"><span>Course / Section / Term</span><b>${ev.course_id} / ${ev.section_id} / ${ev.term}</b></div>
+    </div>
+
+    <div class="card">
+      <div class="check-title">${foundTag(c.enrollment.found)} Enrollment</div>
+      <div class="check-detail">
+        ${c.enrollment.found
+          ? `Takes record found. Grade on file: ${(c.enrollment.record && c.enrollment.record.Grade) || "(in progress / blank)"}`
+          : "No matching Takes record found for this course/section/term."}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="check-title">${statusTag(c.submission_window.satisfied)} Submission Window</div>
+      <div class="check-detail">
+        Missed exam: ${c.submission_window.missed_exam_date} &nbsp;·&nbsp;
+        Filed: ${c.submission_window.request_date} &nbsp;·&nbsp;
+        ${c.submission_window.working_days_elapsed} working day(s) elapsed
+        (limit ${c.submission_window.limit_working_days})
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="check-title">${statusTag(c.proof.provided)} Proof Provided</div>
+      <div class="check-detail">${c.proof.raw_value || "(none provided)"}</div>
+      ${c.proof.file_attached
+        ? `<div class="check-detail" style="margin-top:4px;">
+            Uploaded file: attached and sent to Gemini
+            (${c.proof.file_source === "local" ? "local test file" : "fetched from Proof_File_URL"})
+          </div>`
+        : c.proof.file_url
+          ? `<div class="check-detail" style="margin-top:4px;">
+              Uploaded file: <a href="${c.proof.file_url}" target="_blank">${c.proof.file_url}</a>
+              (URL present but could not be fetched)
+            </div>`
+          : ""}
+    </div>
+
+    <div class="card">
+      <div class="check-title">${statusTag(c.exam_type.excluded === null ? null : !c.exam_type.excluded)} Exam Type</div>
+      <div class="check-detail">
+        Exam_Type: ${c.exam_type.value}
+        ${c.exam_type.excluded_values_confirmed
+          ? ` · Excluded: ${c.exam_type.excluded}`
+          : " · (excluded-type list not yet confirmed)"}
+      </div>
+    </div>
+
+    <div class="rec-banner ${data.recommendation}">${data.recommendation}</div>
+    ${statusNote}
+
+    <div class="reasoning"><b>Reasoning:</b><br>${data.reasoning}</div>
+
+    <div class="explain">
+      <h4>Enrollment</h4><p>${data.checks.enrollment}</p>
+      <h4>Submission window</h4><p>${data.checks.submission_window}</p>
+      <h4>Proof</h4><p>${data.checks.proof}</p>
+      <h4>Reason validity</h4><p>${data.checks.reason_validity}</p>
+      <h4>Exam type</h4><p>${data.checks.exam_type}</p>
+    </div>
+
+    <details>
+      <summary>Raw JSON</summary>
+      <pre>${JSON.stringify(data, null, 2)}</pre>
+    </details>
+  `;
+}
+
+document.getElementById("requestId").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") evaluate();
+});
+</script>
+
+</body>
+</html>
