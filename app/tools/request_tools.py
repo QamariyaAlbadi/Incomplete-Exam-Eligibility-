@@ -1,5 +1,4 @@
-"""Fetches a Request + Incomplete_Exam pair
-get_raise_capacity_request (app/tools/request_tools.py) -- two separate lookups so a
+"""Fetches a Request + Incomplete_Exam pair -- two separate lookups so a
 request that doesn't exist at all gives a different, more useful error than a request
 that exists but isn't an Incomplete Exam request.
 """

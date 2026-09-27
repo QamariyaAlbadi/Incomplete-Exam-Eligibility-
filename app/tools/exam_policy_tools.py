@@ -16,8 +16,7 @@ What it does NOT decide, and why:
   Python is unreliable and risks false positives/negatives. Instead, the raw Reason
   and the policy's list of invalid categories are both included in the evidence
   package, and Gemini -- which is meant to work from exactly this kind of unstructured
-  text -- makes that judgment, the same way it currently explains prerequisite/capacity
-  evidence in .
+  text -- makes that judgment (see the decision rules in app/services/gemini.py).
 
 Field names below (Missed_Exam_Date, Reason, Proof, Exam_Type, Course_ID, Section_ID,
 Term) match the live "Incomplete_Exam" table; Request_Date matches "Request". If

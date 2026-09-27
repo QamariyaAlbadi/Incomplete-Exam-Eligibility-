@@ -1,7 +1,6 @@
 """Verifies the student was enrolled in the Course_ID/Section_ID/Term that the
-Incomplete_Exam request references, via the "Takes" table -- the same
-(Course_ID, Section_ID, Term) triple pattern uses for Section lookups in
-app/tools/capacity_tools.py.
+Incomplete_Exam request references, via the "Takes" table, matched on the
+(Student_ID, Course_ID, Section_ID, Term) combination.
 
 Design choice: this returns what was found (a Takes row, or None) as evidence. It does
 NOT decide whether "no matching Takes row" means REJECT (student was never in this
